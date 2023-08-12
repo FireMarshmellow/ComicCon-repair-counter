@@ -1,14 +1,19 @@
 import machine
 from machine import I2C, Pin
 import ssd1306
-from time import sleep, localtime
+from time import sleep
+from ds1307 import DS1307
 from large_font import font as large_font
 
-# Initialize OLED
-i2c = machine.SoftI2C(scl=Pin(15), sda=Pin(14))
+# Initialize OLED I2C
+i2c_oled = machine.SoftI2C(scl=Pin(15), sda=Pin(14))
 oled_width = 128
 oled_height = 32
-oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c)
+oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c_oled)
+
+# Initialize DS1307 RTC I2C
+i2c_rtc = I2C(0, scl=Pin(1), sda=Pin(0))
+rtc = DS1307(i2c_rtc)
 
 def draw_large_char(oled, char, x, y):
     for row in range(16):
@@ -41,11 +46,12 @@ def display_partitioned_screen(num1, num2, time_str):
     oled.show()
 
 counter1 = 0
-counter2 = 23  # Starting from 23 as per your example
+counter2 = 23
 
 while True:
-    current_time = localtime()
-    time_str = "{:02}:{:02}".format(current_time[3], current_time[4])
+    # Get the current time from the DS1307 RTC
+    year, month, day, weekday, hour, minute, second, _ = rtc.datetime()
+    time_str = "{:02}:{:02}:{:02}".format(hour, minute, second)
     
     display_partitioned_screen(str(counter1), str(counter2), time_str)
     
@@ -55,7 +61,7 @@ while True:
     if counter1 > 999:
         counter1 = 0
 
-    if counter2 > 999:  # Assuming you want this counter to also reset at 999
+    if counter2 > 999:
         counter2 = 0
 
     sleep(1)
