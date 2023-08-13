@@ -11,6 +11,9 @@ oled_width = 128
 oled_height = 32
 oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c_oled)
 
+# Initialize the button
+button = Pin(16, Pin.IN, Pin.PULL_UP)
+
 # Initialize DS1307 RTC I2C
 i2c_rtc = I2C(0, scl=Pin(1), sda=Pin(0))
 rtc = DS1307(i2c_rtc)
@@ -49,13 +52,17 @@ counter1 = 0
 counter2 = 23
 
 while True:
+    # Check if the button is pressed
+    if not button.value():  # Button is pressed when value is LOW (or False)
+        counter1 += 1
+        sleep(0.2)  # Debounce delay to avoid multiple increments for a single press
+
     # Get the current time from the DS1307 RTC
     year, month, day, weekday, hour, minute, second, _ = rtc.datetime()
     time_str = "{:02}:{:02}:{:02}".format(hour, minute, second)
     
     display_partitioned_screen(str(counter1), str(counter2), time_str)
     
-    counter1 += 1
     counter2 += 1
     
     if counter1 > 999:
@@ -65,4 +72,6 @@ while True:
         counter2 = 0
 
     sleep(1)
+
+
 
