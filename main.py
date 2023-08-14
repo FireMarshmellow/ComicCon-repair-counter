@@ -6,23 +6,15 @@ from ds1307 import DS1307
 from large_font import font as large_font
 import math
 import urandom
-from random import choice
-
-phrases = [
-    "All set!",
-    "Good as new!",
-    "Fixed!",
-    "Sorted!",
-    "Patched!",
-    "It's done!"
-]
+import os
 
 # Constants
 OLED_WIDTH = 128
 OLED_HEIGHT = 32
 BUTTON_DEBOUNCE_DELAY = 0.2
-FIREWORK_DELAY = 3
+FIREWORK_DELAY = 10
 MAX_RADIUS = int((OLED_WIDTH**2 + OLED_HEIGHT**2)**0.5)
+LOG_FILE = 'button_presses.csv'
 
 # Initialize OLED I2C
 i2c_oled = machine.SoftI2C(scl=Pin(15), sda=Pin(14))
@@ -34,6 +26,15 @@ button = Pin(16, Pin.IN, Pin.PULL_UP)
 # Initialize DS1307 RTC I2C
 i2c_rtc = I2C(0, scl=Pin(1), sda=Pin(0))
 rtc = DS1307(i2c_rtc)
+
+# Check if the log file exists, if not, create it
+if LOG_FILE not in os.listdir():
+    with open(LOG_FILE, 'w') as f:
+        f.write('Timestamp\n')
+
+def log_button_press(timestamp):
+    with open(LOG_FILE, 'a') as f:
+        f.write('{}\n'.format(timestamp))
 
 def draw_large_char(oled, char, x, y):
     for row in range(16):
@@ -49,12 +50,10 @@ def draw_big_text(oled, text, x, y):
 
 def display_partitioned_screen(num1, num2, time_str):
     oled.fill(0)
-    # Draw partition lines
     for y in range(OLED_HEIGHT):
         oled.pixel(OLED_WIDTH // 2, y, 1)
     for x in range(OLED_WIDTH // 2, OLED_WIDTH):
         oled.pixel(x, OLED_HEIGHT // 2, 1)
-    # Display numbers and time
     draw_big_text(oled, str(num1), 0, 8)
     oled.text(str(num2), 70, 2)
     oled.text(time_str, 70, 18)
@@ -69,7 +68,9 @@ def firework_animation():
             end_y = OLED_HEIGHT // 2 + int(random_length * math.sin(math.radians(random_angle)))
             oled.pixel(end_x, end_y, 1)
 
-    selected_phrase = phrases[urandom.randint(0, len(phrases) - 1)]
+    selected_phrase = urandom.choice([
+        "All set!", "Good as new!", "Fixed!", "Sorted!", "patched!", "It's done!"
+    ])
 
     for radius in range(0, MAX_RADIUS + 1, 2):
         oled.fill(0)
@@ -83,20 +84,26 @@ def firework_animation():
     sleep(0.1)
 
 counter1 = 0
-counter2 = 23
+last_hour = None
+button_presses_this_hour = 0
 
 while True:
+    year, month, day, weekday, hour, minute, second, _ = rtc.datetime()
+    time_str = "{:02}:{:02}:{:02}".format(hour, minute, second)
+
     if not button.value():
         firework_animation()
         counter1 += 1
+        timestamp = "{:04}-{:02}-{:02} {:02}:{:02}:{:02}".format(year, month, day, hour, minute, second)
+        log_button_press(timestamp)
+        
+        if last_hour is None or last_hour != hour:
+            last_hour = hour
+            button_presses_this_hour = 0
+        
+        button_presses_this_hour += 1
         sleep(BUTTON_DEBOUNCE_DELAY)
 
-    year, month, day, weekday, hour, minute, second, _ = rtc.datetime()
-    time_str = "{:02}:{:02}:{:02}".format(hour, minute, second)
-    display_partitioned_screen(counter1, counter2, time_str)
-
-    counter1 %= 1000  # Ensure counter1 doesn't exceed 999
-    counter2 = (counter2 + 1) % 1000
-
+    display_partitioned_screen(counter1, button_presses_this_hour, time_str)
+    counter1 %= 1000
     sleep(0.2)
-
