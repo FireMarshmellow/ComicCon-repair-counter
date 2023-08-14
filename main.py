@@ -11,8 +11,8 @@ import os
 # Constants
 OLED_WIDTH = 128
 OLED_HEIGHT = 32
-BUTTON_DEBOUNCE_DELAY = 0.2
-FIREWORK_DELAY = 10
+BUTTON_DEBOUNCE_DELAY = 0.1
+FIREWORK_DELAY = 1
 MAX_RADIUS = int((OLED_WIDTH**2 + OLED_HEIGHT**2)**0.5)
 LOG_FILE = 'button_presses.csv'
 
@@ -36,10 +36,23 @@ def log_button_press(timestamp):
     with open(LOG_FILE, 'a') as f:
         f.write('{}\n'.format(timestamp))
 
+def get_today_button_presses(year, month, day):
+    count = 0
+    try:
+        with open(LOG_FILE, 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                if line.startswith("{:04}-{:02}-{:02}".format(year, month, day)):
+                    count += 1
+    except:
+        pass
+    return count
+
+
 def draw_large_char(oled, char, x, y):
     for row in range(16):
         for col in range(16):
-            pixel = (large_font[char][row] >> (15 - col)) & 1
+            pixel = (large_font[char]	[row] >> (15 - col)) & 1
             oled.pixel(x + col, y + row, pixel)
 
 def draw_big_text(oled, text, x, y):
@@ -86,6 +99,8 @@ def firework_animation():
 counter1 = 0
 last_hour = None
 button_presses_this_hour = 0
+year, month, day, _, _, _, _, _ = rtc.datetime()
+counter1 = get_today_button_presses(year, month, day)
 
 while True:
     year, month, day, weekday, hour, minute, second, _ = rtc.datetime()
@@ -106,4 +121,5 @@ while True:
 
     display_partitioned_screen(counter1, button_presses_this_hour, time_str)
     counter1 %= 1000
-    sleep(0.2)
+    sleep(0.1)
+
