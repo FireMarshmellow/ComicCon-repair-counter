@@ -7,6 +7,8 @@ from large_font import font as large_font
 import math
 import urandom
 import os
+import utime
+
 
 # Constants
 OLED_WIDTH = 128
@@ -15,6 +17,7 @@ BUTTON_DEBOUNCE_DELAY = 0.1
 FIREWORK_DELAY = 1
 MAX_RADIUS = int((OLED_WIDTH**2 + OLED_HEIGHT**2)**0.5)
 LOG_FILE = 'button_presses.csv'
+INACTIVITY_THRESHOLD = 10  # in seconds
 
 # Initialize OLED I2C
 i2c_oled = machine.SoftI2C(scl=Pin(15), sda=Pin(14))
@@ -35,6 +38,8 @@ if LOG_FILE not in os.listdir():
     with open(LOG_FILE, 'w') as f:
         f.write('Date,Hour,Count\n')
 
+# ... (rest of the function definitions)
+
 def log_button_press(date, hour):
     with open(LOG_FILE, 'r') as f:
         lines = f.readlines()
@@ -50,7 +55,6 @@ def log_button_press(date, hour):
     with open(LOG_FILE, 'w') as f:
         for line in lines:
             f.write(line)
-
 
 def get_today_button_presses_for_hour(year, month, day, hour):
     count = 0
@@ -101,7 +105,6 @@ def get_today_total_presses(year, month, day):
         pass
     return total_presses
 
-
 def firework_animation():
     def draw_firework(radius):
         for angle in range(0, 360, 5):
@@ -126,15 +129,28 @@ def firework_animation():
         sleep_ms(FIREWORK_DELAY)
     sleep(0.1)
 
+# Track the last time of activity
+last_activity = utime.time()
+
 counter1 = get_today_total_presses(year, month, day)
 last_hour = None
 button_presses_this_hour = get_today_button_presses_for_hour(year, month, day, hour)
 
 while True:
+    current_time = utime.time()  # <-- Using utime.time()
+    inactivity_duration = current_time - last_activity
+
+    if inactivity_duration > INACTIVITY_THRESHOLD:
+        oled.poweroff()  # Turn off the OLED display
+    else:
+        oled.poweron()  # Ensure the OLED display is on
+
     year, month, day, _, hour, minute, second, _ = rtc.datetime()
     time_str = "{:02}:{:02}:{:02}".format(hour, minute, second)
 
     if not button.value():
+        last_activity = utime.time()  # <-- Update the last_activity immediately
+        oled.poweron()  # Make sure OLED is powered on for visual feedback
         firework_animation()
         counter1 += 1
         log_button_press((year, month, day), hour)
