@@ -27,27 +27,43 @@ button = Pin(16, Pin.IN, Pin.PULL_UP)
 i2c_rtc = I2C(0, scl=Pin(1), sda=Pin(0))
 rtc = DS1307(i2c_rtc)
 
+# Get the current datetime for initialization
+year, month, day, _, hour, _, _, _ = rtc.datetime()
+
 # Check if the log file exists, if not, create it
 if LOG_FILE not in os.listdir():
     with open(LOG_FILE, 'w') as f:
-        f.write('Timestamp\n')
+        f.write('Date,Hour,Count\n')
 
-def log_button_press(timestamp):
-    with open(LOG_FILE, 'a') as f:
-        f.write('{}\n'.format(timestamp))
+def log_button_press(date, hour):
+    with open(LOG_FILE, 'r') as f:
+        lines = f.readlines()
 
-def get_today_button_presses(year, month, day):
+    for idx, line in enumerate(lines):
+        if line.startswith("{:04}-{:02}-{:02},{:02}".format(date[0], date[1], date[2], hour)):
+            current_count = int(line.strip().split(",")[2])
+            lines[idx] = "{:04}-{:02}-{:02},{:02},{:d}\n".format(date[0], date[1], date[2], hour, current_count + 1)
+            break
+    else:
+        lines.append("{:04}-{:02}-{:02},{:02},1\n".format(date[0], date[1], date[2], hour))
+
+    with open(LOG_FILE, 'w') as f:
+        for line in lines:
+            f.write(line)
+
+
+def get_today_button_presses_for_hour(year, month, day, hour):
     count = 0
     try:
         with open(LOG_FILE, 'r') as f:
             lines = f.readlines()
             for line in lines:
-                if line.startswith("{:04}-{:02}-{:02}".format(year, month, day)):
-                    count += 1
+                if line.startswith("{:04}-{:02}-{:02},{:02}".format(year, month, day, hour)):
+                    count = int(line.strip().split(",")[2])
+                    break
     except:
         pass
     return count
-
 
 def draw_large_char(oled, char, x, y):
     for row in range(16):
@@ -71,6 +87,20 @@ def display_partitioned_screen(num1, num2, time_str):
     oled.text(str(num2), 70, 2)
     oled.text(time_str, 70, 18)
     oled.show()
+
+def get_today_total_presses(year, month, day):
+    total_presses = 0
+    try:
+        with open(LOG_FILE, 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                if line.startswith("{:04}-{:02}-{:02}".format(year, month, day)):
+                    count = int(line.strip().split(",")[2])
+                    total_presses += count
+    except:
+        pass
+    return total_presses
+
 
 def firework_animation():
     def draw_firework(radius):
@@ -96,27 +126,25 @@ def firework_animation():
         sleep_ms(FIREWORK_DELAY)
     sleep(0.1)
 
-counter1 = 0
+counter1 = get_today_total_presses(year, month, day)
 last_hour = None
-button_presses_this_hour = 0
-year, month, day, _, _, _, _, _ = rtc.datetime()
-counter1 = get_today_button_presses(year, month, day)
+button_presses_this_hour = get_today_button_presses_for_hour(year, month, day, hour)
 
 while True:
-    year, month, day, weekday, hour, minute, second, _ = rtc.datetime()
+    year, month, day, _, hour, minute, second, _ = rtc.datetime()
     time_str = "{:02}:{:02}:{:02}".format(hour, minute, second)
 
     if not button.value():
         firework_animation()
         counter1 += 1
-        timestamp = "{:04}-{:02}-{:02} {:02}:{:02}:{:02}".format(year, month, day, hour, minute, second)
-        log_button_press(timestamp)
-        
+        log_button_press((year, month, day), hour)
+
         if last_hour is None or last_hour != hour:
             last_hour = hour
-            button_presses_this_hour = 0
-        
-        button_presses_this_hour += 1
+            button_presses_this_hour = get_today_button_presses_for_hour(year, month, day, hour)
+        else:
+            button_presses_this_hour += 1
+
         sleep(BUTTON_DEBOUNCE_DELAY)
 
     display_partitioned_screen(counter1, button_presses_this_hour, time_str)
