@@ -166,4 +166,3 @@ while True:
     display_partitioned_screen(counter1, button_presses_this_hour, time_str)
     counter1 %= 1000
     sleep(0.1)
-
