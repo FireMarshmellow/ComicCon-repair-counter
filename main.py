@@ -25,6 +25,7 @@ oled = ssd1306.SSD1306_I2C(OLED_WIDTH, OLED_HEIGHT, i2c_oled)
 
 # Initialize the button
 button = Pin(16, Pin.IN, Pin.PULL_UP)
+button2 = Pin(20, Pin.IN, Pin.PULL_UP)
 
 # Initialize DS1307 RTC I2C
 i2c_rtc = I2C(0, scl=Pin(1), sda=Pin(0))
@@ -160,6 +161,21 @@ while True:
             button_presses_this_hour = get_today_button_presses_for_hour(year, month, day, hour)
         else:
             button_presses_this_hour += 1
+
+        sleep(BUTTON_DEBOUNCE_DELAY)
+
+    if not button2.value():
+        last_activity = utime.time()  # <-- Update the last_activity immediately
+        oled.poweron()  # Make sure OLED is powered on for visual feedback
+        firework_animation()
+        counter1 -= 1  # Decrease the counter
+        log_button_press((year, month, day), hour)  # Log the button press
+
+        if last_hour is None or last_hour != hour:
+            last_hour = hour
+            button_presses_this_hour = get_today_button_presses_for_hour(year, month, day, hour)
+        else:
+            button_presses_this_hour -= 1  # Decrease the hourly count
 
         sleep(BUTTON_DEBOUNCE_DELAY)
 
