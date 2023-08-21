@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-df = pd.read_csv('C:/Users/tomas/Documents/GitHub/ComicCon-repair-counter/button_presses.csv')
+df = pd.read_csv('button_presses.csv')
 
 
 # Create a pivot table to reshape the data for visualization
