@@ -2,7 +2,7 @@
 
 This project provides a visual representation of the number of repairs done at a ComicCon event. It uses an OLED display connected to a microcontroller to show the repair count in real-time. Additionally, every button press (indicating a repair) is logged with its timestamp in a CSV file. This data can later be visualized using a Python script.
 
-#Video
+# Video
 https://youtu.be/GgCQQEq_J6w
 
 ## Features
@@ -19,6 +19,15 @@ https://youtu.be/GgCQQEq_J6w
 - OLED Display (128x32)
 - DS1307 RTC Module
 - 2x Push Buttons
+
+# Affiliate links:
+Pico: https://amzn.to/3OI72b8
+RTC: https://amzn.to/3P6l1ss
+OLED: https://amzn.to/3qwPkzn
+Buck Converter: https://amzn.to/45EvC3B
+18650 Holder: https://amzn.to/3E6U9lS
+PCB: https://amzn.to/45e3Afi
+Button: https://amzn.to/44k6BcT
 
 ## Software Requirements
 
